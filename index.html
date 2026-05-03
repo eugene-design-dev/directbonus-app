@@ -583,45 +583,14 @@ tg.setBackgroundColor('#0D0D0F');
 
 // Bot URL — замени на своего бота!
 const BOT_USERNAME = 'directbonus_bot';
-const API_URL = 'https://uphold-zippy-baggage.ngrok-free.dev'; // оставь пустым — данные мок для демо
-
-// ── Mock данные (замени на реальный API позже) ──
-const mockUser = {
-  id: tg.initDataUnsafe?.user?.id || 12345,
-  name: tg.initDataUnsafe?.user?.first_name || 'Игрок',
-  balance: 175,
-  total_earned: 225,
-  total_spent: 50,
-  level: 2,
-  activity_points: 45,
-  ref_code: 'ABCD1234',
-  refs: 2
-};
-
-const mockTop = [
-  { name: 'Александр', earned: 1250, level: 8, emoji: '👑' },
-  { name: 'Мария', earned: 980, level: 7, emoji: '🔥' },
-  { name: 'Дмитрий', earned: 750, level: 6, emoji: '💫' },
-  { name: 'Анна', earned: 620, level: 5, emoji: '⚡' },
-  { name: 'Сергей', earned: 540, level: 5, emoji: '🎮' },
-  { name: mockUser.name, earned: mockUser.total_earned, level: mockUser.level, emoji: '🎯', isMe: true },
-];
-
-const mockHistory = [
-  { type: 'daily', desc: 'Ежедневный бонус', amount: 15, date: 'Сегодня, 10:30' },
-  { type: 'referral', desc: 'Реферал: Артём', amount: 25, date: 'Вчера, 18:15' },
-  { type: 'welcome', desc: 'Приветственный бонус', amount: 50, date: '01.05.2026' },
-  { type: 'spend', desc: 'Трата бонусов', amount: -50, date: '30.04.2026' },
-  { type: 'manual', desc: 'Начислено администратором', amount: 100, date: '29.04.2026' },
-  { type: 'referral', desc: 'Реферал: Елена', amount: 25, date: '28.04.2026' },
-  { type: 'daily', desc: 'Ежедневный бонус', amount: 10, date: '27.04.2026' },
-];
+const API_URL = ''; // оставь пустым — данные мок для демо
 
 const LEVEL_NAMES = {
   1:'🌱 Новичок', 2:'⚡ Игрок', 3:'🔥 Активный', 4:'💫 Опытный',
   5:'🌟 Профи', 6:'💎 Эксперт', 7:'🏆 Ветеран', 8:'👑 Мастер',
   9:'🚀 Легенда', 10:'🌌 Бог'
 };
+const LEVEL_EMOJIS = ['','🌱','⚡','🔥','💫','🌟','💎','🏆','👑','🚀','🌌'];
 
 const TYPE_MAP = {
   daily:    { icon: '🎁', cls: 'gold' },
@@ -632,34 +601,67 @@ const TYPE_MAP = {
   activity: { icon: '⚡', cls: 'gold' },
 };
 
+let currentUser = null;
+
+// ── API helpers ──
+async function api(path, method = 'GET') {
+  const res = await fetch(API_URL + path, { method, headers: {"ngrok-skip-browser-warning": "1"} });
+  return res.json();
+}
+
 // ── Init ──
-function init() {
-  const u = mockUser;
-  document.getElementById('avatarText').textContent = u.name[0].toUpperCase();
-  document.getElementById('balanceAmount').textContent = u.balance;
-  document.getElementById('totalEarned').textContent = u.total_earned + ' 🪙';
-  document.getElementById('totalSpent').textContent = u.total_spent + ' 🪙';
-  document.getElementById('refCount').textContent = u.refs;
-  document.getElementById('levelName').textContent = LEVEL_NAMES[u.level];
-  document.getElementById('levelNum').textContent = u.level;
+async function init() {
+  const tgUser = tg.initDataUnsafe?.user;
+  const tgId = tgUser?.id;
 
-  const progress = u.activity_points % 100;
-  setTimeout(() => {
-    document.getElementById('progressFill').style.width = progress + '%';
-  }, 300);
+  if (!tgId) {
+    document.getElementById('balanceAmount').textContent = '—';
+    showToast('⚠️ Открой через Telegram');
+    return;
+  }
 
-  const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${u.ref_code}`;
-  document.getElementById('refLinkText').textContent = refLink;
-  document.getElementById('refCountPage').textContent = u.refs;
+  try {
+    const u = await api(`/api/user/${tgId}`);
+    currentUser = u;
 
-  renderHistory('homeHistory', mockHistory.slice(0, 3));
-  renderHistory('fullHistory', mockHistory);
-  renderTop();
+    document.getElementById('avatarText').textContent = (u.name || '?')[0].toUpperCase();
+    document.getElementById('balanceAmount').textContent = u.balance;
+    document.getElementById('totalEarned').textContent = u.total_earned + ' 🪙';
+    document.getElementById('totalSpent').textContent = u.total_spent + ' 🪙';
+    document.getElementById('refCount').textContent = u.refs;
+    document.getElementById('levelName').textContent = LEVEL_NAMES[u.level] || '🌱 Новичок';
+    document.getElementById('levelNum').textContent = u.level;
+
+    const progress = u.activity_points % 100;
+    setTimeout(() => {
+      document.getElementById('progressFill').style.width = progress + '%';
+    }, 300);
+
+    const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${u.ref_code}`;
+    document.getElementById('refLinkText').textContent = refLink;
+    document.getElementById('refCountPage').textContent = u.refs;
+
+    // История
+    const history = await api(`/api/history/${tgId}`);
+    renderHistory('homeHistory', history.slice(0, 3));
+    renderHistory('fullHistory', history);
+
+    // Топ
+    const top = await api('/api/top');
+    renderTop(top, tgId);
+
+    // Рефералы
+    const refs = await api(`/api/refs/${tgId}`);
+    renderRefs(refs);
+
+  } catch (e) {
+    showToast('⚠️ Ошибка загрузки данных');
+  }
 }
 
 function renderHistory(containerId, items) {
   const container = document.getElementById(containerId);
-  if (!items.length) {
+  if (!items || !items.length) {
     container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">История пуста</div>';
     return;
   }
@@ -671,7 +673,7 @@ function renderHistory(containerId, items) {
       <div class="history-item">
         <div class="history-icon ${m.cls}">${m.icon}</div>
         <div class="history-info">
-          <div class="history-desc">${tx.desc}</div>
+          <div class="history-desc">${tx.description || tx.desc}</div>
           <div class="history-date">${tx.date}</div>
         </div>
         <div class="history-amount ${cls}">${sign}${tx.amount} 🪙</div>
@@ -679,19 +681,44 @@ function renderHistory(containerId, items) {
   }).join('');
 }
 
-function renderTop() {
+function renderTop(top, myId) {
   const medals = ['🥇','🥈','🥉'];
   const rankCls = ['gold','silver','bronze'];
   const container = document.getElementById('topList');
-  container.innerHTML = mockTop.map((u, i) => `
-    <div class="top-item ${u.isMe ? 'me' : ''}">
+  if (!top || !top.length) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">Пока никого нет</div>';
+    return;
+  }
+  container.innerHTML = top.map((u, i) => {
+    const isMe = u.tg_id === myId;
+    const emoji = LEVEL_EMOJIS[u.level] || '🎮';
+    return `
+    <div class="top-item ${isMe ? 'me' : ''}">
       <div class="top-rank ${rankCls[i] || ''}">${medals[i] || (i+1)}</div>
-      <div class="top-avatar">${u.emoji}</div>
+      <div class="top-avatar">${emoji}</div>
       <div class="top-info">
-        <div class="top-name">${u.name} ${u.isMe ? '← ты' : ''}</div>
-        <div class="top-pts">Уровень ${u.level} · ${LEVEL_NAMES[u.level]}</div>
+        <div class="top-name">${u.name} ${isMe ? '← ты' : ''}</div>
+        <div class="top-pts">Уровень ${u.level} · ${LEVEL_NAMES[u.level] || ''}</div>
       </div>
       <div class="top-amount">${u.earned} 🪙</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRefs(refs) {
+  const container = document.getElementById('refList');
+  if (!refs || !refs.length) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">Пока никого нет</div>';
+    return;
+  }
+  container.innerHTML = refs.map(r => `
+    <div class="history-item">
+      <div class="history-icon green">👤</div>
+      <div class="history-info">
+        <div class="history-desc">${r.name}</div>
+        <div class="history-date">${r.date}</div>
+      </div>
+      <div class="history-amount plus">+25 🪙</div>
     </div>`).join('');
 }
 
@@ -705,10 +732,6 @@ function switchTab(tab) {
 
 // ── Daily bonus ──
 function openDailyBonus() {
-  const streak = 3;
-  const bonus = 10 + (streak - 1) * 5;
-  document.getElementById('popupAmount').textContent = '+' + bonus + ' 🪙';
-  document.getElementById('popupStreak').textContent = 'Стрик: ' + streak + ' дней 🔥';
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -718,16 +741,29 @@ function closePopup(e) {
   }
 }
 
-function claimBonus() {
-  document.getElementById('overlay').classList.remove('show');
-  // В реальной версии — запрос к боту через sendData
-  tg.sendData(JSON.stringify({ action: 'claim_daily' }));
-  showToast('🎁 Бонус получен!');
+async function claimBonus() {
+  if (!currentUser) return;
+  try {
+    const res = await api(`/api/daily/${currentUser.id}`, 'POST');
+    document.getElementById('overlay').classList.remove('show');
+    if (res.success) {
+      document.getElementById('balanceAmount').textContent = res.new_balance;
+      document.getElementById('popupAmount').textContent = '+' + res.bonus + ' 🪙';
+      document.getElementById('popupStreak').textContent = 'Стрик: ' + res.streak + ' дней 🔥';
+      showToast('🎁 +' + res.bonus + ' бонусов получено!');
+      document.getElementById('dailyStatus').textContent = 'Получен ✅';
+    } else {
+      showToast('⏳ Следующий бонус через ' + res.wait);
+      document.getElementById('dailyStatus').textContent = 'Через ' + res.wait;
+    }
+  } catch(e) {
+    showToast('⚠️ Ошибка');
+  }
 }
 
 // ── Ref copy ──
 function copyRef() {
-  const link = `https://t.me/${BOT_USERNAME}?start=ref_${mockUser.ref_code}`;
+  const link = `https://t.me/${BOT_USERNAME}?start=ref_${currentUser?.ref_code || ''}`;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => showToast('✅ Ссылка скопирована!'));
   } else {
