@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DirectBonus</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #FFD166;
+    --gold-dim: #C9A84C;
+    --bg: #0D0D0F;
+    --card: #16161A;
+    --card2: #1E1E24;
+    --border: rgba(255,255,255,0.07);
+    --text: #F0EFE9;
+    --muted: #6B6B7A;
+    --green: #06D6A0;
+    --red: #EF476F;
+    --blue: #4ECDC4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 20px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text); }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px; font-weight: 800;
+    color: var(--bg);
+  }
+
+  /* ── Balance card ── */
+  .balance-card {
+    margin: 20px 20px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(255,209,102,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .balance-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .balance-amount {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .balance-coin { font-size: 24px; }
+  .balance-meta {
+    margin-top: 16px;
+    display: flex;
+    gap: 20px;
+  }
+  .balance-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .balance-stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+  .balance-stat-value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  /* ── Level bar ── */
+  .level-section {
+    margin: 16px 20px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .level-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .level-name {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .level-badge {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--card2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 99px;
+    transition: width 1s cubic-bezier(.16,1,.3,1);
+  }
+
+  /* ── Actions ── */
+  .actions {
+    margin: 16px 20px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .action-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .action-btn:active { transform: scale(0.96); opacity: 0.85; }
+  .action-btn.primary {
+    background: linear-gradient(135deg, #2A2415, #1E1A0F);
+    border-color: rgba(255,209,102,0.2);
+  }
+  .action-btn .btn-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+  .action-btn .btn-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .action-btn .btn-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .action-btn.primary .btn-title { color: var(--gold); }
+
+  /* ── Section ── */
+  .section {
+    margin: 20px 20px 0;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .section-link {
+    font-size: 11px;
+    color: var(--gold);
+    cursor: pointer;
+    opacity: 0.8;
+  }
+
+  /* ── Top list ── */
+  .top-list { display: flex; flex-direction: column; gap: 8px; }
+  .top-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s;
+  }
+  .top-item.me { border-color: rgba(255,209,102,0.25); background: #1A1810; }
+  .top-rank {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .top-rank.gold { color: #FFD700; }
+  .top-rank.silver { color: #C0C0C0; }
+  .top-rank.bronze { color: #CD7F32; }
+  .top-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--card2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .top-info { flex: 1; min-width: 0; }
+  .top-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .top-pts {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .top-amount {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  /* ── History ── */
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .history-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .history-icon.green { background: rgba(6,214,160,0.12); }
+  .history-icon.red { background: rgba(239,71,111,0.12); }
+  .history-icon.gold { background: rgba(255,209,102,0.12); }
+  .history-info { flex: 1; min-width: 0; }
+  .history-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .history-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .history-amount {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .history-amount.plus { color: var(--green); }
+  .history-amount.minus { color: var(--red); }
+
+  /* ── Daily bonus popup ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: flex-end;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .overlay.show { opacity: 1; pointer-events: all; }
+  .popup {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 28px 24px 40px;
+    width: 100%;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(.16,1,.3,1);
+    text-align: center;
+  }
+  .overlay.show .popup { transform: translateY(0); }
+  .popup-emoji { font-size: 56px; margin-bottom: 16px; display: block; }
+  .popup-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .popup-sub { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 24px; }
+  .popup-amount {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .popup-streak { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .popup-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--bg);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .popup-btn:active { transform: scale(0.97); }
+
+  /* ── Ref section ── */
+  .ref-card {
+    margin: 16px 20px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+  }
+  .ref-link {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 10px 0;
+    line-height: 1.5;
+  }
+  .ref-copy-btn {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid rgba(255,209,102,0.2);
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .ref-copy-btn:active { transform: scale(0.97); background: rgba(255,209,102,0.08); }
+
+  /* ── Nav tabs ── */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(13,13,15,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 10px 0 24px;
+    z-index: 50;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 4px 0;
+  }
+  .nav-icon { font-size: 20px; transition: transform 0.2s; }
+  .nav-label { font-size: 9px; font-weight: 500; color: var(--muted); letter-spacing: 0.5px; }
+  .nav-item.active .nav-icon { transform: scale(1.15); }
+  .nav-item.active .nav-label { color: var(--gold); }
+
+  .page { display: none; padding-bottom: 100px; }
+  .page.active { display: block; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    background: var(--green);
+    color: var(--bg);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 99px;
+    z-index: 200;
+    transition: transform 0.35s cubic-bezier(.16,1,.3,1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .spacer { height: 20px; }
+</style>
+</head>
+<body>
+
+<!-- PAGES -->
+<div id="page-home" class="page active">
+  <div class="header">
+    <div class="logo">Direct<span>Bonus</span></div>
+    <div class="avatar" id="avatarText">?</div>
+  </div>
+
+  <div class="balance-card">
+    <div class="balance-label">Баланс бонусов</div>
+    <div class="balance-amount">
+      <span id="balanceAmount">—</span>
+      <span class="balance-coin">🪙</span>
+    </div>
+    <div class="balance-meta">
+      <div class="balance-stat">
+        <span class="balance-stat-label">Заработано</span>
+        <span class="balance-stat-value" id="totalEarned">—</span>
+      </div>
+      <div class="balance-stat">
+        <span class="balance-stat-label">Потрачено</span>
+        <span class="balance-stat-value" id="totalSpent">—</span>
+      </div>
+      <div class="balance-stat">
+        <span class="balance-stat-label">Рефералов</span>
+        <span class="balance-stat-value" id="refCount">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="level-section">
+    <div class="level-row">
+      <div class="level-name" id="levelName">🌱 Новичок</div>
+      <div class="level-badge">Ур. <span id="levelNum">1</span></div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <div class="action-btn primary" onclick="openDailyBonus()">
+      <span class="btn-icon">🎁</span>
+      <div class="btn-title">Ежедневный бонус</div>
+      <div class="btn-sub" id="dailyStatus">Доступен!</div>
+    </div>
+    <div class="action-btn" onclick="copyRef()">
+      <span class="btn-icon">👥</span>
+      <div class="btn-title">Пригласить друга</div>
+      <div class="btn-sub">+25 🪙 за реферала</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">История</div>
+      <div class="section-link" onclick="switchTab('history')">Все →</div>
+    </div>
+    <div class="history-list" id="homeHistory"></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<div id="page-top" class="page">
+  <div class="header">
+    <div class="logo">Direct<span>Bonus</span></div>
+    <div style="font-size:11px;color:var(--muted)">🏆 Топ игроков</div>
+  </div>
+  <div class="section" style="margin-top:16px">
+    <div class="top-list" id="topList"></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<div id="page-ref" class="page">
+  <div class="header">
+    <div class="logo">Direct<span>Bonus</span></div>
+    <div style="font-size:11px;color:var(--muted)">👥 Рефералы</div>
+  </div>
+  <div class="ref-card" style="margin-top:16px">
+    <div class="section-title" style="margin-bottom:6px">Твоя реферальная ссылка</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">За каждого приглашённого — <b style="color:var(--gold)">+25 🪙</b></div>
+    <div class="ref-link" id="refLinkText">Загрузка...</div>
+    <button class="ref-copy-btn" onclick="copyRef()">📋 Скопировать ссылку</button>
+  </div>
+  <div class="section" style="margin-top:16px">
+    <div class="section-title" style="margin-bottom:12px">Мои рефералы (<span id="refCountPage">0</span>)</div>
+    <div class="history-list" id="refList">
+      <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">Пока никого нет</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<div id="page-history" class="page">
+  <div class="header">
+    <div class="logo">Direct<span>Bonus</span></div>
+    <div style="font-size:11px;color:var(--muted)">📜 История</div>
+  </div>
+  <div class="section" style="margin-top:16px">
+    <div class="history-list" id="fullHistory"></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-item active" onclick="switchTab('home')" id="nav-home">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">ГЛАВНАЯ</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('top')" id="nav-top">
+    <div class="nav-icon">🏆</div>
+    <div class="nav-label">ТОП</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('ref')" id="nav-ref">
+    <div class="nav-icon">👥</div>
+    <div class="nav-label">РЕФЕРАЛЫ</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('history')" id="nav-history">
+    <div class="nav-icon">📜</div>
+    <div class="nav-label">ИСТОРИЯ</div>
+  </div>
+</div>
+
+<!-- DAILY BONUS POPUP -->
+<div class="overlay" id="overlay" onclick="closePopup(event)">
+  <div class="popup">
+    <span class="popup-emoji">🎁</span>
+    <div class="popup-title">Ежедневный бонус</div>
+    <div class="popup-sub">Заходи каждый день — бонус растёт со стриком!</div>
+    <div class="popup-amount" id="popupAmount">+10 🪙</div>
+    <div class="popup-streak" id="popupStreak">Стрик: 1 день 🔥</div>
+    <button class="popup-btn" onclick="claimBonus()">Забрать бонус</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ Скопировано!</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+tg.setHeaderColor('#0D0D0F');
+tg.setBackgroundColor('#0D0D0F');
+
+// Bot URL — замени на своего бота!
+const BOT_USERNAME = 'directbonus_bot';
+const API_URL = ''; // оставь пустым — данные мок для демо
+
+// ── Mock данные (замени на реальный API позже) ──
+const mockUser = {
+  id: tg.initDataUnsafe?.user?.id || 12345,
+  name: tg.initDataUnsafe?.user?.first_name || 'Игрок',
+  balance: 175,
+  total_earned: 225,
+  total_spent: 50,
+  level: 2,
+  activity_points: 45,
+  ref_code: 'ABCD1234',
+  refs: 2
+};
+
+const mockTop = [
+  { name: 'Александр', earned: 1250, level: 8, emoji: '👑' },
+  { name: 'Мария', earned: 980, level: 7, emoji: '🔥' },
+  { name: 'Дмитрий', earned: 750, level: 6, emoji: '💫' },
+  { name: 'Анна', earned: 620, level: 5, emoji: '⚡' },
+  { name: 'Сергей', earned: 540, level: 5, emoji: '🎮' },
+  { name: mockUser.name, earned: mockUser.total_earned, level: mockUser.level, emoji: '🎯', isMe: true },
+];
+
+const mockHistory = [
+  { type: 'daily', desc: 'Ежедневный бонус', amount: 15, date: 'Сегодня, 10:30' },
+  { type: 'referral', desc: 'Реферал: Артём', amount: 25, date: 'Вчера, 18:15' },
+  { type: 'welcome', desc: 'Приветственный бонус', amount: 50, date: '01.05.2026' },
+  { type: 'spend', desc: 'Трата бонусов', amount: -50, date: '30.04.2026' },
+  { type: 'manual', desc: 'Начислено администратором', amount: 100, date: '29.04.2026' },
+  { type: 'referral', desc: 'Реферал: Елена', amount: 25, date: '28.04.2026' },
+  { type: 'daily', desc: 'Ежедневный бонус', amount: 10, date: '27.04.2026' },
+];
+
+const LEVEL_NAMES = {
+  1:'🌱 Новичок', 2:'⚡ Игрок', 3:'🔥 Активный', 4:'💫 Опытный',
+  5:'🌟 Профи', 6:'💎 Эксперт', 7:'🏆 Ветеран', 8:'👑 Мастер',
+  9:'🚀 Легенда', 10:'🌌 Бог'
+};
+
+const TYPE_MAP = {
+  daily:    { icon: '🎁', cls: 'gold' },
+  referral: { icon: '👥', cls: 'green' },
+  welcome:  { icon: '🎉', cls: 'green' },
+  manual:   { icon: '👑', cls: 'gold' },
+  spend:    { icon: '💸', cls: 'red' },
+  activity: { icon: '⚡', cls: 'gold' },
+};
+
+// ── Init ──
+function init() {
+  const u = mockUser;
+  document.getElementById('avatarText').textContent = u.name[0].toUpperCase();
+  document.getElementById('balanceAmount').textContent = u.balance;
+  document.getElementById('totalEarned').textContent = u.total_earned + ' 🪙';
+  document.getElementById('totalSpent').textContent = u.total_spent + ' 🪙';
+  document.getElementById('refCount').textContent = u.refs;
+  document.getElementById('levelName').textContent = LEVEL_NAMES[u.level];
+  document.getElementById('levelNum').textContent = u.level;
+
+  const progress = u.activity_points % 100;
+  setTimeout(() => {
+    document.getElementById('progressFill').style.width = progress + '%';
+  }, 300);
+
+  const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${u.ref_code}`;
+  document.getElementById('refLinkText').textContent = refLink;
+  document.getElementById('refCountPage').textContent = u.refs;
+
+  renderHistory('homeHistory', mockHistory.slice(0, 3));
+  renderHistory('fullHistory', mockHistory);
+  renderTop();
+}
+
+function renderHistory(containerId, items) {
+  const container = document.getElementById(containerId);
+  if (!items.length) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">История пуста</div>';
+    return;
+  }
+  container.innerHTML = items.map(tx => {
+    const m = TYPE_MAP[tx.type] || { icon: '💰', cls: 'gold' };
+    const sign = tx.amount > 0 ? '+' : '';
+    const cls = tx.amount > 0 ? 'plus' : 'minus';
+    return `
+      <div class="history-item">
+        <div class="history-icon ${m.cls}">${m.icon}</div>
+        <div class="history-info">
+          <div class="history-desc">${tx.desc}</div>
+          <div class="history-date">${tx.date}</div>
+        </div>
+        <div class="history-amount ${cls}">${sign}${tx.amount} 🪙</div>
+      </div>`;
+  }).join('');
+}
+
+function renderTop() {
+  const medals = ['🥇','🥈','🥉'];
+  const rankCls = ['gold','silver','bronze'];
+  const container = document.getElementById('topList');
+  container.innerHTML = mockTop.map((u, i) => `
+    <div class="top-item ${u.isMe ? 'me' : ''}">
+      <div class="top-rank ${rankCls[i] || ''}">${medals[i] || (i+1)}</div>
+      <div class="top-avatar">${u.emoji}</div>
+      <div class="top-info">
+        <div class="top-name">${u.name} ${u.isMe ? '← ты' : ''}</div>
+        <div class="top-pts">Уровень ${u.level} · ${LEVEL_NAMES[u.level]}</div>
+      </div>
+      <div class="top-amount">${u.earned} 🪙</div>
+    </div>`).join('');
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+}
+
+// ── Daily bonus ──
+function openDailyBonus() {
+  const streak = 3;
+  const bonus = 10 + (streak - 1) * 5;
+  document.getElementById('popupAmount').textContent = '+' + bonus + ' 🪙';
+  document.getElementById('popupStreak').textContent = 'Стрик: ' + streak + ' дней 🔥';
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closePopup(e) {
+  if (e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('show');
+  }
+}
+
+function claimBonus() {
+  document.getElementById('overlay').classList.remove('show');
+  // В реальной версии — запрос к боту через sendData
+  tg.sendData(JSON.stringify({ action: 'claim_daily' }));
+  showToast('🎁 Бонус получен!');
+}
+
+// ── Ref copy ──
+function copyRef() {
+  const link = `https://t.me/${BOT_USERNAME}?start=ref_${mockUser.ref_code}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => showToast('✅ Ссылка скопирована!'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ Ссылка скопирована!');
+  }
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
