@@ -605,7 +605,7 @@ let currentUser = null;
 
 // ── API helpers ──
 async function api(path, method = 'GET') {
-  const res = await fetch(API_URL + path, { method, headers: {"ngrok-skip-browser-warning": "1"} });
+  const res = await fetch(API_URL + path, { method });
   return res.json();
 }
 
