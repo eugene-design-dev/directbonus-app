@@ -612,7 +612,7 @@ async function api(path, method = 'GET') {
 // ── Init ──
 async function init() {
   const tgUser = tg.initDataUnsafe?.user;
-  const tgId = tgUser?.id;
+  const tgId = tgUser?.id || new URLSearchParams(window.location.search).get("uid");
 
   if (!tgId) {
     document.getElementById('balanceAmount').textContent = '—';
